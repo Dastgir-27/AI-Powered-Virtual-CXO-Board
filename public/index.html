@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Virtual CXO Board — AI Executive Boardroom</title>
+  <meta name="description" content="An AI-powered virtual boardroom where your CFO, CMO, COO, and CSO debate strategy and business questions in real-time." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo">
+        <span class="logo-icon">🏛️</span>
+        <div>
+          <h1 class="logo-title">Virtual CXO Board</h1>
+          <p class="logo-sub">AI Executive Boardroom</p>
+        </div>
+      </div>
+    </div>
+    <div class="header-center">
+      <div class="session-selector-wrap">
+        <select id="sessionSelect" class="session-select" title="Select session">
+          <option value="">— Select a session —</option>
+        </select>
+        <button id="newSessionBtn" class="btn btn-primary" title="New Session">
+          + New Session
+        </button>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="persona-badges">
+        <span class="persona-badge cfo" title="Chief Financial Officer">CFO</span>
+        <span class="persona-badge cmo" title="Chief Marketing Officer">CMO</span>
+        <span class="persona-badge coo" title="Chief Operating Officer">COO</span>
+        <span class="persona-badge cso" title="Chief Strategy Officer">CSO</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Main Layout ─────────────────────────────────────────── -->
+  <div class="app-body">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <h2 class="sidebar-title">The Board</h2>
+        <div class="board-members">
+          <div class="member-card">
+            <div class="member-avatar cfo">AC</div>
+            <div class="member-info">
+              <strong>Alex Chen</strong>
+              <span>CFO · Financial Discipline</span>
+            </div>
+          </div>
+          <div class="member-card">
+            <div class="member-avatar cmo">PS</div>
+            <div class="member-info">
+              <strong>Priya Sharma</strong>
+              <span>CMO · Growth & Brand</span>
+            </div>
+          </div>
+          <div class="member-card">
+            <div class="member-avatar coo">MW</div>
+            <div class="member-info">
+              <strong>Marcus Williams</strong>
+              <span>COO · Operations</span>
+            </div>
+          </div>
+          <div class="member-card">
+            <div class="member-avatar cso">JP</div>
+            <div class="member-info">
+              <strong>Jordan Park</strong>
+              <span>CSO · Strategy</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h2 class="sidebar-title">Company Data</h2>
+        <div class="upload-area" id="uploadArea">
+          <div class="upload-icon">📊</div>
+          <p class="upload-text">Upload P&amp;L / KPI Data</p>
+          <p class="upload-sub">CSV or JSON — the board will reference your actual numbers</p>
+          <label class="btn btn-outline upload-btn" id="uploadLabel">
+            Choose File
+            <input type="file" id="fileInput" accept=".csv,.json" style="display:none" />
+          </label>
+          <div id="uploadStatus" class="upload-status"></div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h2 class="sidebar-title">Past Sessions</h2>
+        <div id="sessionList" class="session-list">
+          <p class="empty-state">No sessions yet</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Chat Area -->
+    <main class="chat-area">
+      <!-- Empty / Welcome state -->
+      <div class="welcome-screen" id="welcomeScreen">
+        <div class="welcome-content">
+          <div class="welcome-icon">🏛️</div>
+          <h2>Welcome to the Boardroom</h2>
+          <p>Start a new session or select an existing one. Then pose your first question to the board — they'll each respond with their unique perspective and debate each other.</p>
+          <div class="example-questions">
+            <p class="example-label">Try asking:</p>
+            <button class="example-btn" onclick="useExample(this)">Our Q3 margins dropped 4 points. What should we do?</button>
+            <button class="example-btn" onclick="useExample(this)">Should we expand into Southeast Asia next year?</button>
+            <button class="example-btn" onclick="useExample(this)">A competitor just cut prices by 15%. How do we respond?</button>
+            <button class="example-btn" onclick="useExample(this)">We need to cut $2M from the budget. Where do we start?</button>
+          </div>
+          <button class="btn btn-primary btn-large" id="welcomeNewBtn">Start New Session →</button>
+        </div>
+      </div>
+
+      <!-- Active chat -->
+      <div class="chat-container" id="chatContainer" style="display:none">
+        <div class="chat-header">
+          <div class="chat-title-wrap">
+            <h2 class="chat-title" id="chatTitle">Board Session</h2>
+            <span class="chat-date" id="chatDate"></span>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="deleteSessionBtn" title="Delete session">🗑 Delete</button>
+        </div>
+
+        <div class="messages-wrap" id="messagesWrap">
+          <div class="messages" id="messages"></div>
+        </div>
+
+        <!-- Thinking indicator -->
+        <div class="thinking-bar" id="thinkingBar" style="display:none">
+          <div class="thinking-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <span class="thinking-text" id="thinkingText">Board is deliberating…</span>
+        </div>
+
+        <!-- Input -->
+        <div class="input-area">
+          <div class="input-wrap">
+            <div class="ceo-badge">CEO</div>
+            <textarea
+              id="messageInput"
+              class="message-input"
+              placeholder="Ask your board a question, share a challenge, or request their input…"
+              rows="1"
+            ></textarea>
+            <button id="sendBtn" class="send-btn" title="Send to board">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+          <p class="input-hint">The board will respond in two rounds: initial perspectives, then debate.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ── New Session Modal ───────────────────────────────────── -->
+  <div class="modal-overlay" id="newSessionModal" style="display:none">
+    <div class="modal">
+      <h3>Start New Board Session</h3>
+      <p>Give this session a name, or leave it blank — it'll be auto-named from your first question.</p>
+      <input type="text" id="sessionTitleInput" class="modal-input" placeholder="e.g. Q3 Strategy Review" maxlength="80" />
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancelModalBtn">Cancel</button>
+        <button class="btn btn-primary" id="confirmNewSessionBtn">Create Session</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

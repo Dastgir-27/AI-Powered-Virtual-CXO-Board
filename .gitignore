@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Local Environment Variables
+.env
+
+# Session & Upload Storage
+sessions/
+uploads/
+CXO_Board_AI_Assignment_1.pdf
+implementation_plan.md
+
+# OS-specific files
+.DS_Store
+Thumbs.db
