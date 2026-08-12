@@ -11,7 +11,18 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const GEMINI_MODEL = "gemini-flash-latest";
+// Model cascade — if one hits its daily quota, automatically fall back to the next
+const MODEL_CASCADE = ["gemini-flash-latest", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
+let activeModelIndex = 0;
+function getActiveModel() { return MODEL_CASCADE[activeModelIndex]; }
+function advanceToNextModel() {
+  if (activeModelIndex < MODEL_CASCADE.length - 1) {
+    activeModelIndex++;
+    console.warn(`[Model Fallback] Switched to: ${MODEL_CASCADE[activeModelIndex]}`);
+    return true;
+  }
+  return false; // No more models to try
+}
 
 app.use(cors());
 app.use(express.json());
@@ -71,7 +82,7 @@ function formatDataForPrompt(session) {
   return `\n\nCOMPANY DATA (P&L):\n| ${headers} |\n| ${divider} |\n${tableRows}\n\nReference specific numbers from this data where relevant.\n`;
 }
 
-async function generateBoardRound(ceoQuestion, priorResponses, session, round) {
+async function generateBoardRound(ceoQuestion, priorResponses, session, round, model = null) {
   const dataContext = formatDataForPrompt(session);
   const recentHistory = session.messages.slice(-10).map((m) => `[${m.speaker}]: ${m.content}`).join("\n");
   const personasIntro = PERSONA_ORDER.map((key) => {
@@ -88,7 +99,7 @@ async function generateBoardRound(ceoQuestion, priorResponses, session, round) {
   }
 
   const result = await ai.models.generateContent({
-    model: GEMINI_MODEL,
+    model: model || getActiveModel(),
     contents: prompt,
     config: { responseMimeType: "application/json" },
   });
@@ -104,23 +115,41 @@ async function generateBoardRound(ceoQuestion, priorResponses, session, round) {
   }
 }
 
-async function generateBoardRoundWithRetry(ceoQuestion, priorResponses, session, round, retries = 4, delayMs = 8000) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await generateBoardRound(ceoQuestion, priorResponses, session, round);
-    } catch (e) {
-      const isTransient = e.status === 429 || e.status === 503 ||
-        (e.message && (e.message.includes("429") || e.message.includes("503") || e.message.includes("Quota") ||
-          e.message.includes("limit") || e.message.includes("demand") || e.message.includes("UNAVAILABLE") || e.message.includes("overloaded")));
-      if (isTransient && i < retries - 1) {
-        console.warn(`[Retry] Round ${round}, attempt ${i + 1}, waiting ${delayMs / 1000}s...`);
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-        delayMs *= 2;
-      } else {
-        throw e;
+async function generateBoardRoundWithRetry(ceoQuestion, priorResponses, session, round) {
+  // Try each model in the cascade
+  for (let m = 0; m < MODEL_CASCADE.length; m++) {
+    const model = MODEL_CASCADE[m];
+    let delayMs = 8000;
+    // Attempt with transient-error retries for this model
+    for (let i = 0; i < 3; i++) {
+      try {
+        console.log(`[Round ${round}] Trying model: ${model} (attempt ${i + 1})`);
+        return await generateBoardRound(ceoQuestion, priorResponses, session, round, model);
+      } catch (e) {
+        const isDailyQuota = e.message &&
+          (e.message.includes("PerDay") || e.message.includes("per_day") ||
+           (e.message.includes("Quota") && !e.message.includes("retryDelay")));
+        const isTransient = !isDailyQuota && (e.status === 503 || e.status === 429 ||
+          (e.message && (e.message.includes("503") || e.message.includes("demand") ||
+           e.message.includes("UNAVAILABLE") || e.message.includes("overloaded"))));
+
+        if (isDailyQuota) {
+          // Daily quota hit — no point retrying this model, break to next model in cascade
+          console.warn(`[Daily Quota] Model ${model} exhausted its daily quota. Switching to next model...`);
+          break;
+        } else if (isTransient && i < 2) {
+          // Transient rate limit — wait and retry same model
+          console.warn(`[Retry] Model ${model}, Round ${round}, attempt ${i + 1}, waiting ${delayMs / 1000}s...`);
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          delayMs *= 2;
+        } else {
+          // Non-transient error or exhausted retries
+          throw e;
+        }
       }
     }
   }
+  throw new Error("All models in the cascade have exhausted their daily quotas. Please try again tomorrow or upgrade your API key.");
 }
 
 app.get("/api/models", async (req, res) => {
