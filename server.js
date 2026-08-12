@@ -8,7 +8,6 @@ const { v4: uuidv4 } = require("uuid");
 const fs = require("fs");
 const path = require("path");
 
-// ─── Setup ────────────────────────────────────────────────────────────────────
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -18,256 +17,137 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// Ensure directories exist
 const SESSIONS_DIR = path.join(__dirname, "sessions");
 const UPLOADS_DIR = path.join(__dirname, "uploads");
 [SESSIONS_DIR, UPLOADS_DIR].forEach((dir) => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
-// ─── File Upload ──────────────────────────────────────────────────────────────
 const storage = multer.diskStorage({
   destination: UPLOADS_DIR,
   filename: (req, file, cb) => cb(null, `${req.params.id}_data${path.extname(file.originalname)}`),
 });
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
-// ─── Persona Definitions ──────────────────────────────────────────────────────
 const PERSONAS = {
   CFO: {
-    name: "Alex Chen",
-    title: "Chief Financial Officer",
-    initials: "CFO",
-    color: "#059669",
-    systemPrompt: `You are Alex Chen, the Chief Financial Officer of this company. 
-You have 20 years of experience in corporate finance, M&A, and capital markets.
-
-Your priorities and lens:
-- Financial discipline above all: protect margins, EBITDA, and cash flow
-- You are deeply skeptical of growth investment that doesn't show clear ROI within 18 months
-- You believe in data-driven decisions and always reference specific numbers from available P&L data
-- You tend to clash with the CMO on marketing spend and brand investment
-- You support the COO on operational efficiency initiatives
-- Your communication style: direct, numbers-first, occasionally blunt
-
-When responding:
-1. Always lead with the financial implication
-2. Reference specific figures from the data if available
-3. Be skeptical of vague growth promises — demand metrics
-4. Push back on the CMO if they advocate for spend without clear attribution
-5. Keep responses to 3-5 sentences — executive-level brevity`,
+    name: "Alex Chen", title: "Chief Financial Officer", initials: "CFO", color: "#059669",
+    systemPrompt: `You are Alex Chen, CFO. 20 years in corporate finance. Your priorities: protect margins, EBITDA, cash flow. Skeptical of vague growth promises. Always cite specific numbers. Push back on CMO spend without ROI. Align with COO on operational efficiency. Be direct, numbers-first, brief (3-5 sentences).`,
   },
   CMO: {
-    name: "Priya Sharma",
-    title: "Chief Marketing Officer",
-    initials: "CMO",
-    color: "#e11d48",
-    systemPrompt: `You are Priya Sharma, the Chief Marketing Officer of this company.
-You have 18 years of experience in brand strategy, demand generation, and digital marketing.
-
-Your priorities and lens:
-- Brand equity and market share are long-term assets — cutting them is short-sighted
-- You believe growth investment during downturns creates disproportionate market share gains
-- You clash with the CFO when they push blanket cost-cutting that would damage the brand
-- You align with the CSO on market positioning and competitive strategy
-- Your communication style: energetic, customer-centric, strategic, occasionally pushes back hard on finance
-
-When responding:
-1. Always bring the customer and market perspective
-2. Reference competitive dynamics, brand health, and growth opportunity costs
-3. Defend growth investment with strategic rationale, not just gut feel
-4. Push back on the CFO if their cuts would damage customer acquisition or retention
-5. Keep responses to 3-5 sentences — executive-level brevity`,
+    name: "Priya Sharma", title: "Chief Marketing Officer", initials: "CMO", color: "#e11d48",
+    systemPrompt: `You are Priya Sharma, CMO. 18 years in brand strategy and demand generation. Your priorities: brand equity, market share, growth. Believe cutting marketing during downturns is shortsighted. Push back hard on CFO blanket cuts. Align with CSO on positioning. Be energetic, customer-centric, strategic (3-5 sentences).`,
   },
   COO: {
-    name: "Marcus Williams",
-    title: "Chief Operating Officer",
-    initials: "COO",
-    color: "#d97706",
-    systemPrompt: `You are Marcus Williams, the Chief Operating Officer of this company.
-You have 22 years of experience in supply chain, operations management, and organizational design.
-
-Your priorities and lens:
-- Execution and operational efficiency are your north star
-- You believe most financial problems are operational problems in disguise
-- You are pragmatic and solutions-oriented — you find the "how" while others debate the "what"
-- You align with the CFO on cost discipline but push back if cuts would hurt execution capacity
-- You often mediate between CFO and CMO by finding operational solutions
-- Your communication style: calm, methodical, action-oriented, practical
-
-When responding:
-1. Always bring the operational / execution angle — what needs to change in how we work?
-2. Identify specific operational levers (headcount, process, vendor contracts, automation)
-3. Be the voice of pragmatism when debate gets too abstract
-4. Offer concrete next steps or milestones
-5. Keep responses to 3-5 sentences — executive-level brevity`,
+    name: "Marcus Williams", title: "Chief Operating Officer", initials: "COO", color: "#d97706",
+    systemPrompt: `You are Marcus Williams, COO. 22 years in operations and supply chain. Your priorities: execution, efficiency, reducing operational friction. Most financial problems are operational problems. Be the pragmatist, offer concrete next steps. Mediate between CFO and CMO. Calm, methodical, action-oriented (3-5 sentences).`,
   },
   CSO: {
-    name: "Jordan Park",
-    title: "Chief Strategy Officer",
-    initials: "CSO",
-    color: "#7c3aed",
-    systemPrompt: `You are Jordan Park, the Chief Strategy Officer of this company.
-You have 15 years of experience in strategy consulting (ex-McKinsey), M&A, and corporate development.
-
-Your priorities and lens:
-- Long-term competitive positioning over short-term optimization
-- You think in 3-5 year arcs and worry that short-term cuts create strategic vulnerability
-- You align with the CMO on protecting market position but demand strategic discipline, not just spend
-- You challenge the CFO when short-term cuts could damage long-term competitive moat
-- You bring external market context: competitor moves, industry trends, disruption risks
-- Your communication style: thoughtful, frameworks-driven, big-picture, sometimes provocative
-
-When responding:
-1. Always zoom out — what does this mean for our 3-year competitive position?
-2. Reference competitor behavior, industry trends, or strategic frameworks where relevant
-3. Challenge the group if they're optimizing locally while missing the bigger strategic risk
-4. Connect tactical decisions to long-term strategic bets
-5. Keep responses to 3-5 sentences — executive-level brevity`,
+    name: "Jordan Park", title: "Chief Strategy Officer", initials: "CSO", color: "#7c3aed",
+    systemPrompt: `You are Jordan Park, CSO. Ex-McKinsey, 15 years in strategy and M&A. Your priorities: long-term competitive positioning over short-term optimization. Think in 3-5 year arcs. Bring external context: competitor moves, industry trends. Challenge group when they optimize locally and miss strategic risk. Thoughtful, frameworks-driven, provocative (3-5 sentences).`,
   },
 };
-
 const PERSONA_ORDER = ["CFO", "CMO", "COO", "CSO"];
 
-// ─── Session Helpers ──────────────────────────────────────────────────────────
-function getSessionPath(id) {
-  return path.join(SESSIONS_DIR, `${id}.json`);
-}
-
+function getSessionPath(id) { return path.join(SESSIONS_DIR, `${id}.json`); }
 function loadSession(id) {
   const p = getSessionPath(id);
   if (!fs.existsSync(p)) return null;
   return JSON.parse(fs.readFileSync(p, "utf-8"));
 }
-
-function saveSession(session) {
-  fs.writeFileSync(getSessionPath(session.id), JSON.stringify(session, null, 2));
-}
-
+function saveSession(session) { fs.writeFileSync(getSessionPath(session.id), JSON.stringify(session, null, 2)); }
 function listSessions() {
-  return fs
-    .readdirSync(SESSIONS_DIR)
-    .filter((f) => f.endsWith(".json"))
-    .map((f) => {
-      const s = JSON.parse(fs.readFileSync(path.join(SESSIONS_DIR, f), "utf-8"));
-      return { id: s.id, title: s.title, createdAt: s.createdAt, messageCount: s.messages.length };
-    })
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return fs.readdirSync(SESSIONS_DIR).filter((f) => f.endsWith(".json")).map((f) => {
+    const s = JSON.parse(fs.readFileSync(path.join(SESSIONS_DIR, f), "utf-8"));
+    return { id: s.id, title: s.title, createdAt: s.createdAt, messageCount: s.messages.length };
+  }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
-
-// ─── Data Formatting ──────────────────────────────────────────────────────────
 function formatDataForPrompt(session) {
   if (!session.uploadedData || session.uploadedData.length === 0) return "";
   const rows = session.uploadedData;
   const headers = Object.keys(rows[0]).join(" | ");
   const divider = Object.keys(rows[0]).map(() => "---").join(" | ");
-  const body = rows.map((r) => Object.values(r).join(" | ")).join("\n");
-  return `\n\n📊 COMPANY DATA (P&L / KPIs):\n| ${headers} |\n| ${divider} |\n${rows
-    .map((r) => "| " + Object.values(r).join(" | ") + " |")
-    .join("\n")}\n\nYou MUST reference specific numbers from this data in your response where relevant.\n`;
+  const tableRows = rows.map((r) => "| " + Object.values(r).join(" | ") + " |").join("\n");
+  return `\n\nCOMPANY DATA (P&L):\n| ${headers} |\n| ${divider} |\n${tableRows}\n\nReference specific numbers from this data where relevant.\n`;
 }
 
-// ─── Gemini Call ──────────────────────────────────────────────────────────────
-async function callPersona(personaKey, ceoQuestion, priorResponses, session, round) {
-  const persona = PERSONAS[personaKey];
+async function generateBoardRound(ceoQuestion, priorResponses, session, round) {
   const dataContext = formatDataForPrompt(session);
-
-  // Build conversation history for context
-  const recentHistory = session.messages
-    .slice(-10)
-    .map((m) => `[${m.speaker}]: ${m.content}`)
-    .join("\n");
+  const recentHistory = session.messages.slice(-10).map((m) => `[${m.speaker}]: ${m.content}`).join("\n");
+  const personasIntro = PERSONA_ORDER.map((key) => {
+    const p = PERSONAS[key];
+    return `### ${p.initials}: ${p.name} (${p.title})\n${p.systemPrompt}`;
+  }).join("\n\n");
 
   let prompt = "";
-
   if (round === 1) {
-    prompt = `${persona.systemPrompt}
-${dataContext}
-
-BOARD SESSION CONTEXT (recent history):
-${recentHistory || "This is the start of the session."}
-
-The CEO has just asked:
-"${ceoQuestion}"
-
-Give your initial response as ${persona.name}, ${persona.title}. Be direct, stay in character, and reference the data if available.`;
+    prompt = `You are simulating a boardroom meeting. Generate the initial response for each of the 4 executives.\n\nPERSONAS:\n${personasIntro}\n${dataContext}\nRECENT CONTEXT:\n${recentHistory || "Start of session."}\n\nCEO QUESTION: "${ceoQuestion}"\n\nReturn ONLY valid JSON array, no markdown:\n[\n  { "speaker": "CFO", "content": "..." },\n  { "speaker": "CMO", "content": "..." },\n  { "speaker": "COO", "content": "..." },\n  { "speaker": "CSO", "content": "..." }\n]`;
   } else {
-    // Round 2: debate/pushback
-    const roundOneResponses = priorResponses
-      .map((r) => `[${PERSONAS[r.persona].name} — ${r.persona}]: ${r.content}`)
-      .join("\n\n");
-
-    prompt = `${persona.systemPrompt}
-${dataContext}
-
-BOARD SESSION CONTEXT (recent history):
-${recentHistory || "This is the start of the session."}
-
-The CEO asked: "${ceoQuestion}"
-
-Your colleagues have already weighed in:
-${roundOneResponses}
-
-Now respond as ${persona.name}, ${persona.title}. This is the DEBATE round — you should:
-- Agree with what makes sense, but push back on what you disagree with
-- Call out a specific colleague by name if you're challenging them
-- Add any nuance or angle that was missed in Round 1
-- Keep it brief and executive — 3-5 sentences`;
+    const r1 = priorResponses.map((r) => `[${PERSONAS[r.persona].name} (${r.persona})]: ${r.content}`).join("\n\n");
+    prompt = `You are simulating the DEBATE round of a boardroom meeting. Generate debate/pushback responses for each executive.\n\nPERSONAS:\n${personasIntro}\n${dataContext}\nRECENT CONTEXT:\n${recentHistory || "Start of session."}\n\nCEO QUESTION: "${ceoQuestion}"\n\nROUND 1 PERSPECTIVES:\n${r1}\n\nEach executive should react to specific colleagues by name, push back or agree with nuance, 3-5 sentences.\n\nReturn ONLY valid JSON array, no markdown:\n[\n  { "speaker": "CFO", "content": "..." },\n  { "speaker": "CMO", "content": "..." },\n  { "speaker": "COO", "content": "..." },\n  { "speaker": "CSO", "content": "..." }\n]`;
   }
 
   const result = await ai.models.generateContent({
     model: GEMINI_MODEL,
     contents: prompt,
+    config: { responseMimeType: "application/json" },
   });
-  return result.text.trim();
+
+  const text = result.text.trim();
+  try {
+    const arr = JSON.parse(text);
+    if (Array.isArray(arr) && arr.length > 0) return arr;
+    throw new Error("Not a valid array");
+  } catch (e) {
+    console.error("JSON parse failed:", text);
+    throw new Error("Model returned invalid JSON");
+  }
 }
 
-// ─── API Routes ───────────────────────────────────────────────────────────────
+async function generateBoardRoundWithRetry(ceoQuestion, priorResponses, session, round, retries = 4, delayMs = 8000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await generateBoardRound(ceoQuestion, priorResponses, session, round);
+    } catch (e) {
+      const isTransient = e.status === 429 || e.status === 503 ||
+        (e.message && (e.message.includes("429") || e.message.includes("503") || e.message.includes("Quota") ||
+          e.message.includes("limit") || e.message.includes("demand") || e.message.includes("UNAVAILABLE") || e.message.includes("overloaded")));
+      if (isTransient && i < retries - 1) {
+        console.warn(`[Retry] Round ${round}, attempt ${i + 1}, waiting ${delayMs / 1000}s...`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        delayMs *= 2;
+      } else {
+        throw e;
+      }
+    }
+  }
+}
 
-// List available Gemini models for this API key
 app.get("/api/models", async (req, res) => {
   try {
     const pager = await ai.models.list();
     const models = [];
     for await (const m of pager) models.push(m.name);
     res.json(models);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
-
-// List all sessions
 
 app.get("/api/sessions", (req, res) => {
-  try {
-    res.json(listSessions());
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  try { res.json(listSessions()); } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Create new session
 app.post("/api/session/new", (req, res) => {
-  const session = {
-    id: uuidv4(),
-    title: req.body.title || "New Board Session",
-    createdAt: new Date().toISOString(),
-    messages: [],
-    uploadedData: [],
-    uploadedFileName: null,
-  };
+  const session = { id: uuidv4(), title: req.body.title || "New Board Session", createdAt: new Date().toISOString(), messages: [], uploadedData: [], uploadedFileName: null };
   saveSession(session);
   res.json(session);
 });
 
-// Get session
 app.get("/api/session/:id", (req, res) => {
   const session = loadSession(req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found" });
   res.json(session);
 });
 
-// Delete session
 app.delete("/api/session/:id", (req, res) => {
   const p = getSessionPath(req.params.id);
   if (!fs.existsSync(p)) return res.status(404).json({ error: "Session not found" });
@@ -275,145 +155,63 @@ app.delete("/api/session/:id", (req, res) => {
   res.json({ success: true });
 });
 
-// Upload P&L data
 app.post("/api/session/:id/upload", upload.single("file"), (req, res) => {
   const session = loadSession(req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found" });
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-
   try {
     const content = fs.readFileSync(req.file.path, "utf-8");
     let data;
-
     if (req.file.originalname.endsWith(".json")) {
       data = JSON.parse(content);
       if (!Array.isArray(data)) data = [data];
     } else {
-      // CSV
       data = parse(content, { columns: true, skip_empty_lines: true, trim: true });
     }
-
     session.uploadedData = data;
     session.uploadedFileName = req.file.originalname;
-
-    // Add a system message to the chat
-    session.messages.push({
-      id: uuidv4(),
-      speaker: "SYSTEM",
-      content: `📊 P&L data loaded: **${req.file.originalname}** (${data.length} rows). The board will now reference this data in their responses.`,
-      timestamp: new Date().toISOString(),
-      round: null,
-    });
-
+    session.messages.push({ id: uuidv4(), speaker: "SYSTEM", content: `P&L data loaded: ${req.file.originalname} (${data.length} rows).`, timestamp: new Date().toISOString(), round: null });
     saveSession(session);
     res.json({ success: true, rows: data.length, fileName: req.file.originalname });
-  } catch (e) {
-    res.status(400).json({ error: `Failed to parse file: ${e.message}` });
-  }
+  } catch (e) { res.status(400).json({ error: `Failed to parse file: ${e.message}` }); }
 });
 
-// CEO sends a message → triggers board discussion
 app.post("/api/session/:id/message", async (req, res) => {
   const session = loadSession(req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found" });
-
   const { content } = req.body;
   if (!content || !content.trim()) return res.status(400).json({ error: "Message content required" });
 
-  // Auto-title session from first message
   if (session.messages.filter((m) => m.speaker === "CEO").length === 0) {
     session.title = content.length > 60 ? content.slice(0, 57) + "..." : content;
   }
 
-  // Add CEO message
-  const ceoMsg = {
-    id: uuidv4(),
-    speaker: "CEO",
-    content: content.trim(),
-    timestamp: new Date().toISOString(),
-    round: null,
-  };
+  const ceoMsg = { id: uuidv4(), speaker: "CEO", content: content.trim(), timestamp: new Date().toISOString(), round: null };
   session.messages.push(ceoMsg);
   saveSession(session);
 
   try {
     const allNewMessages = [ceoMsg];
 
-    // Helper wrapper to handle retries for API calls on 429 (Rate Limit) and 503 (Overloaded)
-    async function callPersonaWithRetry(personaKey, ceoQuestion, priorResponses, round, retries = 4, delayMs = 6000) {
-      for (let i = 0; i < retries; i++) {
-        try {
-          return await callPersona(personaKey, ceoQuestion, priorResponses, session, round);
-        } catch (e) {
-          const isTransient = e.status === 429 || e.status === 503 ||
-                              (e.message && (
-                                e.message.includes("429") || 
-                                e.message.includes("503") || 
-                                e.message.includes("Quota") || 
-                                e.message.includes("limit") || 
-                                e.message.includes("demand") || 
-                                e.message.includes("UNAVAILABLE") ||
-                                e.message.includes("overloaded")
-                              ));
-          
-          if (isTransient && i < retries - 1) {
-            const errType = e.status === 503 ? "503 Overloaded" : "429 RateLimit";
-            console.warn(`[${errType}] Retrying ${personaKey} (Round ${round}) in ${delayMs / 1000}s (Attempt ${i + 1}/${retries})...`);
-            await new Promise((resolve) => setTimeout(resolve, delayMs));
-            delayMs *= 2; // Exponential backoff
-          } else {
-            console.error(`Error for ${personaKey} (Round ${round}) after ${i + 1} attempts:`, e);
-            throw e;
-          }
-        }
-      }
-    }
-
-    // ── Round 1: Initial responses (Parallel) ────────────────────────────────
-    console.log("Triggering Round 1 responses in parallel...");
-    const roundOnePromises = PERSONA_ORDER.map(async (personaKey) => {
-      const responseText = await callPersonaWithRetry(personaKey, content, [], 1);
-      return { persona: personaKey, content: responseText };
-    });
-
-    const roundOneResponses = await Promise.all(roundOnePromises);
-
-    // Save and prepare messages for Round 1
-    roundOneResponses.forEach((res) => {
-      const msg = {
-        id: uuidv4(),
-        speaker: res.persona,
-        personaName: PERSONAS[res.persona].name,
-        personaTitle: PERSONAS[res.persona].title,
-        content: res.content,
-        timestamp: new Date().toISOString(),
-        round: 1,
-      };
+    console.log("[Round 1] Generating initial perspectives...");
+    const r1Results = await generateBoardRoundWithRetry(content, [], session, 1);
+    const roundOneResponses = [];
+    r1Results.forEach((res) => {
+      const key = (res.speaker || "").toUpperCase();
+      if (!PERSONAS[key]) return;
+      const msg = { id: uuidv4(), speaker: key, personaName: PERSONAS[key].name, personaTitle: PERSONAS[key].title, content: res.content, timestamp: new Date().toISOString(), round: 1 };
       session.messages.push(msg);
       allNewMessages.push(msg);
+      roundOneResponses.push({ persona: key, content: res.content });
     });
     saveSession(session);
 
-    // ── Round 2: Debate/pushback (Parallel) ──────────────────────────────────
-    console.log("Triggering Round 2 debate in parallel...");
-    const roundTwoPromises = PERSONA_ORDER.map(async (personaKey) => {
-      const responseText = await callPersonaWithRetry(personaKey, content, roundOneResponses, 2);
-      return { persona: personaKey, content: responseText };
-    });
-
-    const roundTwoResponses = await Promise.all(roundTwoPromises);
-
-    // Save and prepare messages for Round 2
-    roundTwoResponses.forEach((res) => {
-      const msg = {
-        id: uuidv4(),
-        speaker: res.persona,
-        personaName: PERSONAS[res.persona].name,
-        personaTitle: PERSONAS[res.persona].title,
-        content: res.content,
-        timestamp: new Date().toISOString(),
-        round: 2,
-      };
+    console.log("[Round 2] Generating debate responses...");
+    const r2Results = await generateBoardRoundWithRetry(content, roundOneResponses, session, 2);
+    r2Results.forEach((res) => {
+      const key = (res.speaker || "").toUpperCase();
+      if (!PERSONAS[key]) return;
+      const msg = { id: uuidv4(), speaker: key, personaName: PERSONAS[key].name, personaTitle: PERSONAS[key].title, content: res.content, timestamp: new Date().toISOString(), round: 2 };
       session.messages.push(msg);
       allNewMessages.push(msg);
     });
@@ -421,14 +219,13 @@ app.post("/api/session/:id/message", async (req, res) => {
 
     res.json({ messages: allNewMessages });
   } catch (e) {
-    console.error("Gemini error:", e);
+    console.error("Board error:", e);
     res.status(500).json({ error: `AI error: ${e.message}` });
   }
 });
 
-// ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`\n🏛️  Virtual CXO Board running at http://localhost:${PORT}`);
-  console.log(`   Sessions stored in: ${SESSIONS_DIR}`);
-  console.log(`   Gemini API key: ${process.env.GEMINI_API_KEY ? "✅ Loaded" : "❌ MISSING — set GEMINI_API_KEY in .env"}\n`);
+  console.log(`\nVirtual CXO Board running at http://localhost:${PORT}`);
+  console.log(`Sessions: ${SESSIONS_DIR}`);
+  console.log(`Gemini API: ${process.env.GEMINI_API_KEY ? "Loaded" : "MISSING"}\n`);
 });
