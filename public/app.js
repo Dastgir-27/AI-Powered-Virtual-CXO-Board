@@ -144,8 +144,8 @@ function escapeHtmlBasic(text) {
 }
 
 // ─── Load a session ────────────────────────────────────────────────────────────
-async function loadSession(id) {
-  if (isLoading) return;
+async function loadSession(id, force = false) {
+  if (isLoading && !force) return;
   try {
     const res = await fetch(`${API}/api/session/${id}`);
     if (!res.ok) throw new Error("Session not found");
@@ -246,6 +246,18 @@ async function sendMessage() {
   const content = messageInput.value.trim();
   if (!content || isLoading) return;
 
+  // Append CEO's message to the DOM immediately so it feels responsive
+  const tempCeoMsg = {
+    id: "temp-ceo",
+    speaker: "CEO",
+    content: content,
+    timestamp: new Date().toISOString()
+  };
+  welcomeScreen.style.display = "none";
+  chatContainer.style.display = "flex";
+  messages.appendChild(renderMessage(tempCeoMsg));
+  scrollToBottom();
+
   messageInput.value = "";
   messageInput.style.height = "auto";
 
@@ -265,8 +277,8 @@ async function sendMessage() {
 
     const data = await res.json();
 
-    // Re-render full session to include all messages with round dividers
-    await loadSession(currentSessionId);
+    // Re-render full session (pass true to bypass isLoading guard)
+    await loadSession(currentSessionId, true);
 
     // Update title in header
     const sessions = await (await fetch(`${API}/api/sessions`)).json();
