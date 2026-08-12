@@ -339,19 +339,30 @@ app.post("/api/session/:id/message", async (req, res) => {
   try {
     const allNewMessages = [ceoMsg];
 
-    // Helper wrapper to handle retries for API calls on 429
-    async function callPersonaWithRetry(personaKey, ceoQuestion, priorResponses, round, retries = 3, delayMs = 12000) {
+    // Helper wrapper to handle retries for API calls on 429 (Rate Limit) and 503 (Overloaded)
+    async function callPersonaWithRetry(personaKey, ceoQuestion, priorResponses, round, retries = 4, delayMs = 6000) {
       for (let i = 0; i < retries; i++) {
         try {
           return await callPersona(personaKey, ceoQuestion, priorResponses, session, round);
         } catch (e) {
-          const isRateLimit = e.status === 429 || 
-                              (e.message && (e.message.includes("429") || e.message.includes("Quota") || e.message.includes("limit")));
-          if (isRateLimit && i < retries - 1) {
-            console.warn(`[429 Quota] Retrying ${personaKey} (Round ${round}) in ${delayMs / 1000}s (Attempt ${i + 1}/${retries})...`);
+          const isTransient = e.status === 429 || e.status === 503 ||
+                              (e.message && (
+                                e.message.includes("429") || 
+                                e.message.includes("503") || 
+                                e.message.includes("Quota") || 
+                                e.message.includes("limit") || 
+                                e.message.includes("demand") || 
+                                e.message.includes("UNAVAILABLE") ||
+                                e.message.includes("overloaded")
+                              ));
+          
+          if (isTransient && i < retries - 1) {
+            const errType = e.status === 503 ? "503 Overloaded" : "429 RateLimit";
+            console.warn(`[${errType}] Retrying ${personaKey} (Round ${round}) in ${delayMs / 1000}s (Attempt ${i + 1}/${retries})...`);
             await new Promise((resolve) => setTimeout(resolve, delayMs));
-            delayMs *= 1.5; // Exponential backoff
+            delayMs *= 2; // Exponential backoff
           } else {
+            console.error(`Error for ${personaKey} (Round ${round}) after ${i + 1} attempts:`, e);
             throw e;
           }
         }
