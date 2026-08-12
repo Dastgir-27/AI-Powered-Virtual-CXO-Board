@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI-Powered Virtual CXO Board — Technical Workflow Document</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    color: #1a1a2e;
+    background: #fff;
+    font-size: 11pt;
+    line-height: 1.6;
+  }
+
+  /* ── Page Layout ──────────────────────────────────────────────── */
+  .page { max-width: 800px; margin: 0 auto; padding: 40px 50px; }
+
+  @media print {
+    body { font-size: 10pt; }
+    .page { padding: 20px 30px; }
+    .page-break { page-break-before: always; }
+    .no-break { page-break-inside: avoid; }
+  }
+
+  /* ── Cover Page ───────────────────────────────────────────────── */
+  .cover {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    color: #fff;
+    padding: 60px 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute; top: -100px; right: -100px;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+  }
+  .cover::after {
+    content: '';
+    position: absolute; bottom: -80px; left: -80px;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+  }
+  .cover-tag {
+    font-size: 9pt; font-weight: 600; letter-spacing: 3px; text-transform: uppercase;
+    color: #a78bfa; margin-bottom: 20px;
+  }
+  .cover-title {
+    font-size: 36pt; font-weight: 800; line-height: 1.1; margin-bottom: 16px;
+    background: linear-gradient(135deg, #fff, #c4b5fd);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .cover-subtitle {
+    font-size: 15pt; font-weight: 300; color: #c4b5fd; margin-bottom: 40px;
+  }
+  .cover-meta {
+    display: flex; gap: 40px; flex-wrap: wrap;
+  }
+  .cover-meta-item { }
+  .cover-meta-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 2px; color: #a78bfa; }
+  .cover-meta-value { font-size: 11pt; font-weight: 500; color: #fff; margin-top: 4px; }
+  .cover-personas {
+    position: absolute; right: 60px; bottom: 60px;
+    display: flex; gap: 12px;
+  }
+  .persona-chip {
+    padding: 6px 14px; border-radius: 20px; font-size: 9pt; font-weight: 600;
+    letter-spacing: 1px; border: 1px solid rgba(255,255,255,0.2);
+  }
+  .chip-cfo { background: rgba(5,150,105,0.3); color: #6ee7b7; }
+  .chip-cmo { background: rgba(225,29,72,0.3); color: #fda4af; }
+  .chip-coo { background: rgba(217,119,6,0.3); color: #fcd34d; }
+  .chip-cso { background: rgba(124,58,237,0.3); color: #c4b5fd; }
+
+  /* ── Section Styles ───────────────────────────────────────────── */
+  .section { margin-bottom: 40px; }
+  
+  h1 { font-size: 22pt; font-weight: 800; color: #0f0c29; margin-bottom: 8px; }
+  h2 {
+    font-size: 16pt; font-weight: 700; color: #302b63;
+    border-bottom: 3px solid #7c3aed;
+    padding-bottom: 8px; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  h2 .icon { font-size: 18pt; }
+  h3 { font-size: 12pt; font-weight: 700; color: #302b63; margin-bottom: 8px; margin-top: 16px; }
+  h4 { font-size: 10pt; font-weight: 600; color: #6b21a8; margin-bottom: 6px; }
+  p { margin-bottom: 10px; color: #374151; }
+
+  /* ── Header Banner ────────────────────────────────────────────── */
+  .section-header {
+    background: linear-gradient(135deg, #0f0c29, #302b63);
+    color: #fff; padding: 20px 30px; border-radius: 12px;
+    margin-bottom: 24px;
+  }
+  .section-header h2 { color: #fff; border-bottom: 1px solid rgba(255,255,255,0.2); }
+
+  /* ── Cards ────────────────────────────────────────────────────── */
+  .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .card-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+  .card {
+    border-radius: 10px; padding: 16px 18px;
+    border: 1px solid #e5e7eb;
+    background: #fafafa;
+  }
+  .card.purple { border-left: 4px solid #7c3aed; }
+  .card.green  { border-left: 4px solid #059669; }
+  .card.red    { border-left: 4px solid #e11d48; }
+  .card.amber  { border-left: 4px solid #d97706; }
+  .card.blue   { border-left: 4px solid #2563eb; }
+
+  /* ── Persona Cards ────────────────────────────────────────────── */
+  .persona-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  .persona-card {
+    border-radius: 10px; padding: 16px;
+    border: 1px solid #e5e7eb;
+  }
+  .persona-card-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+  }
+  .persona-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11pt; font-weight: 700; color: #fff;
+    flex-shrink: 0;
+  }
+  .persona-name { font-weight: 700; font-size: 11pt; }
+  .persona-title { font-size: 8pt; color: #6b7280; }
+  .persona-card ul { list-style: none; padding: 0; }
+  .persona-card ul li { font-size: 9pt; color: #374151; padding: 3px 0; display: flex; align-items: flex-start; gap: 6px; }
+  .persona-card ul li::before { content: '→'; color: #7c3aed; flex-shrink: 0; font-weight: 700; }
+
+  /* ── Flow Diagram ─────────────────────────────────────────────── */
+  .flow {
+    display: flex; flex-direction: column; gap: 0;
+    margin: 20px 0;
+  }
+  .flow-step {
+    display: flex; align-items: stretch; gap: 16px;
+  }
+  .flow-left {
+    display: flex; flex-direction: column; align-items: center; width: 40px;
+  }
+  .flow-dot {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed, #2563eb);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 9pt;
+    flex-shrink: 0;
+  }
+  .flow-line { width: 2px; background: linear-gradient(#7c3aed, #e5e7eb); flex: 1; min-height: 12px; }
+  .flow-content {
+    flex: 1; padding: 10px 14px 20px 0;
+  }
+  .flow-content h4 { margin-bottom: 4px; font-size: 11pt; color: #1a1a2e; }
+  .flow-content p { font-size: 9.5pt; color: #6b7280; margin: 0; }
+
+  /* ── Code Block ───────────────────────────────────────────────── */
+  .code-block {
+    background: #1e1b4b;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 12px 0;
+    overflow: hidden;
+  }
+  .code-block pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8pt;
+    color: #c4b5fd;
+    white-space: pre-wrap;
+    line-height: 1.6;
+  }
+  .code-label {
+    font-size: 8pt; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+    color: #a78bfa; margin-bottom: 8px;
+  }
+
+  /* ── Table ────────────────────────────────────────────────────── */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  th {
+    background: #302b63; color: #fff; padding: 8px 12px;
+    text-align: left; font-size: 9pt; font-weight: 600;
+  }
+  td { padding: 8px 12px; font-size: 9pt; border-bottom: 1px solid #e5e7eb; }
+  tr:nth-child(even) td { background: #f8f7ff; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 8pt; font-weight: 600;
+  }
+  .badge-green { background: #d1fae5; color: #065f46; }
+  .badge-red   { background: #fee2e2; color: #991b1b; }
+  .badge-amber { background: #fef3c7; color: #92400e; }
+  .badge-blue  { background: #dbeafe; color: #1e40af; }
+
+  /* ── Info Box ─────────────────────────────────────────────────── */
+  .info-box {
+    border-radius: 10px; padding: 14px 18px; margin: 12px 0;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .info-box.note  { background: #ede9fe; border-left: 4px solid #7c3aed; }
+  .info-box.tip   { background: #d1fae5; border-left: 4px solid #059669; }
+  .info-box.warn  { background: #fef3c7; border-left: 4px solid #d97706; }
+  .info-box-icon  { font-size: 14pt; }
+  .info-box-text  { font-size: 9.5pt; color: #374151; }
+
+  /* ── Stack Pills ──────────────────────────────────────────────── */
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .pill {
+    padding: 4px 12px; border-radius: 20px; font-size: 8.5pt; font-weight: 600;
+    background: #ede9fe; color: #5b21b6;
+  }
+
+  /* ── Divider ──────────────────────────────────────────────────── */
+  .divider { border: none; border-top: 2px solid #ede9fe; margin: 30px 0; }
+
+  /* ── Footer ───────────────────────────────────────────────────── */
+  .footer {
+    text-align: center; font-size: 8pt; color: #9ca3af;
+    padding: 20px 0; border-top: 1px solid #e5e7eb; margin-top: 40px;
+  }
+
+  /* ── Architecture Diagram ─────────────────────────────────────── */
+  .arch-box {
+    border: 2px solid #7c3aed; border-radius: 12px;
+    padding: 14px 20px; text-align: center;
+    font-weight: 700; font-size: 10pt; color: #302b63;
+    background: #faf5ff;
+  }
+  .arch-arrow {
+    text-align: center; font-size: 16pt; color: #7c3aed;
+    line-height: 1;
+  }
+  .arch-row { display: flex; gap: 12px; align-items: center; margin: 6px 0; }
+  .arch-col { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+
+  /* ── Model Cascade Visual ─────────────────────────────────────── */
+  .cascade-row { display: flex; gap: 10px; align-items: center; margin: 6px 0; }
+  .cascade-model {
+    flex: 1; padding: 10px 14px; border-radius: 8px;
+    font-weight: 600; font-size: 9pt; text-align: center;
+  }
+  .m1 { background: #d1fae5; color: #065f46; border: 2px solid #059669; }
+  .m2 { background: #dbeafe; color: #1e40af; border: 2px solid #2563eb; }
+  .m3 { background: #ede9fe; color: #5b21b6; border: 2px solid #7c3aed; }
+  .cascade-arrow { font-size: 13pt; color: #9ca3af; flex-shrink: 0; }
+  .cascade-label { font-size: 8pt; color: #6b7280; text-align: center; margin-top: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     COVER PAGE
+══════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-tag">Technical Workflow Document</div>
+  <div class="cover-title">AI-Powered<br>Virtual CXO Board</div>
+  <div class="cover-subtitle">A Multi-Agent AI Boardroom System</div>
+  <div class="cover-meta">
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Project Type</div>
+      <div class="cover-meta-value">Full-Stack Web Application</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Stack</div>
+      <div class="cover-meta-value">Node.js · Express · Google Gemini AI</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Deployment</div>
+      <div class="cover-meta-value">Render (Free Tier) · GitHub</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Date</div>
+      <div class="cover-meta-value">August 2026</div>
+    </div>
+  </div>
+  <div class="cover-personas">
+    <div class="persona-chip chip-cfo">CFO</div>
+    <div class="persona-chip chip-cmo">CMO</div>
+    <div class="persona-chip chip-coo">COO</div>
+    <div class="persona-chip chip-cso">CSO</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 2 — OVERVIEW & ARCHITECTURE
+══════════════════════════════════════════════════════ -->
+<div class="page page-break">
+
+  <div class="section">
+    <h2><span class="icon">📌</span>1. Project Overview</h2>
+    <p>The <strong>AI-Powered Virtual CXO Board</strong> is a web application that simulates an AI boardroom of four distinct C-suite executives — CFO, CMO, COO, and CSO — that a CEO can converse with to explore business strategy, analyse financial performance, and pressure-test decisions.</p>
+    <p>Instead of a single generic chatbot, each persona has a unique personality, set of priorities, and communication style. The system generates two rounds of responses per CEO question: an initial perspective round, followed by a live debate round where executives push back on each other by name.</p>
+
+    <div class="card-grid" style="margin-top:18px;">
+      <div class="card purple">
+        <h4>Primary Goal</h4>
+        <p style="font-size:9.5pt;">Create a "boardroom in a box" — distinct AI executive personas that disagree constructively, the way a real leadership team would.</p>
+      </div>
+      <div class="card green">
+        <h4>Target User</h4>
+        <p style="font-size:9.5pt;">A CEO or founder who wants to stress-test strategic decisions with multiple lenses before acting.</p>
+      </div>
+      <div class="card amber">
+        <h4>Scope</h4>
+        <p style="font-size:9.5pt;">Working prototype with multi-agent orchestration, session management, and P&amp;L data upload for contextual grounding.</p>
+      </div>
+      <div class="card blue">
+        <h4>Key Constraint</h4>
+        <p style="font-size:9.5pt;">Free-tier Gemini API — engineered to maximise quality while minimising API calls and handling quota limits gracefully.</p>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="section">
+    <h2><span class="icon">🏗️</span>2. System Architecture</h2>
+
+    <div class="card" style="padding: 20px; background: #f8f7ff;">
+      <div style="display:flex; flex-direction:column; gap:8px; align-items:center;">
+        <div class="arch-box" style="width:220px; background:#0f0c29; color:#fff; border-color:#0f0c29;">🌐 Browser (Frontend)</div>
+        <div class="arch-arrow">↕</div>
+        <div class="arch-box" style="width:280px;">⚙️ Express.js REST API (Backend)</div>
+        <div class="arch-row" style="width:100%; justify-content:center; gap:20px;">
+          <div class="arch-arrow" style="transform:rotate(30deg)">↙</div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-arrow" style="transform:rotate(-30deg)">↘</div>
+        </div>
+        <div class="arch-row" style="width:100%; justify-content:center; gap:10px;">
+          <div class="arch-box" style="font-size:8.5pt; padding:10px; background:#f0fdf4; border-color:#059669;">📁 Sessions<br><span style="font-weight:400; font-size:8pt;">JSON on disk</span></div>
+          <div class="arch-box" style="font-size:8.5pt; padding:10px; background:#faf5ff; border-color:#7c3aed;">🤖 Google Gemini<br><span style="font-weight:400; font-size:8pt;">Generative AI</span></div>
+          <div class="arch-box" style="font-size:8.5pt; padding:10px; background:#fff7ed; border-color:#d97706;">📊 P&amp;L Upload<br><span style="font-weight:400; font-size:8pt;">CSV / JSON</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-grid" style="margin-top:16px;">
+      <div class="card purple">
+        <h4>Frontend (Vanilla JS)</h4>
+        <p style="font-size:9pt;">Single-page UI — session management sidebar, chat timeline with round dividers, file upload, responsive design.</p>
+      </div>
+      <div class="card purple">
+        <h4>Backend (Node/Express)</h4>
+        <p style="font-size:9pt;">REST API with 6 endpoints. Orchestrates AI persona calls, persists sessions to JSON files, handles file parsing.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 3 — EXECUTIVE PERSONAS
+══════════════════════════════════════════════════════ -->
+<div class="page page-break">
+
+  <div class="section">
+    <h2><span class="icon">👥</span>3. Executive Personas</h2>
+    <p>Each persona is implemented as a detailed system prompt that defines their background, priorities, communication style, and inter-personal dynamics with other executives.</p>
+
+    <div class="persona-grid">
+      <div class="persona-card" style="border-top: 4px solid #059669;">
+        <div class="persona-card-header">
+          <div class="persona-avatar" style="background: #059669;">AC</div>
+          <div>
+            <div class="persona-name">Alex Chen</div>
+            <div class="persona-title">Chief Financial Officer (CFO)</div>
+          </div>
+        </div>
+        <ul>
+          <li>Protects margins, EBITDA, and cash flow above all</li>
+          <li>Demands clear ROI within 18 months before any spend</li>
+          <li>Always references specific numbers from P&amp;L data</li>
+          <li>Frequently clashes with CMO on brand spend</li>
+          <li>Style: direct, numbers-first, blunt</li>
+        </ul>
+      </div>
+      <div class="persona-card" style="border-top: 4px solid #e11d48;">
+        <div class="persona-card-header">
+          <div class="persona-avatar" style="background: #e11d48;">PS</div>
+          <div>
+            <div class="persona-name">Priya Sharma</div>
+            <div class="persona-title">Chief Marketing Officer (CMO)</div>
+          </div>
+        </div>
+        <ul>
+          <li>Defends brand equity as a long-term strategic asset</li>
+          <li>Believes market share won during downturns is durable</li>
+          <li>Pushes back hard on blanket cost cuts from CFO</li>
+          <li>Aligns with CSO on positioning and competitive strategy</li>
+          <li>Style: energetic, customer-centric, strategic</li>
+        </ul>
+      </div>
+      <div class="persona-card" style="border-top: 4px solid #d97706;">
+        <div class="persona-card-header">
+          <div class="persona-avatar" style="background: #d97706;">MW</div>
+          <div>
+            <div class="persona-name">Marcus Williams</div>
+            <div class="persona-title">Chief Operating Officer (COO)</div>
+          </div>
+        </div>
+        <ul>
+          <li>Views most financial problems as operational problems</li>
+          <li>Identifies specific levers: headcount, vendors, automation</li>
+          <li>Acts as pragmatic mediator between CFO and CMO</li>
+          <li>Always offers concrete next steps and milestones</li>
+          <li>Style: calm, methodical, action-oriented</li>
+        </ul>
+      </div>
+      <div class="persona-card" style="border-top: 4px solid #7c3aed;">
+        <div class="persona-card-header">
+          <div class="persona-avatar" style="background: #7c3aed;">JP</div>
+          <div>
+            <div class="persona-name">Jordan Park</div>
+            <div class="persona-title">Chief Strategy Officer (CSO)</div>
+          </div>
+        </div>
+        <ul>
+          <li>Thinks in 3–5 year competitive positioning arcs</li>
+          <li>Brings external context: competitor moves, industry trends</li>
+          <li>Challenges short-term optimisation that damages the moat</li>
+          <li>Ex-McKinsey background, frameworks-driven thinking</li>
+          <li>Style: thoughtful, big-picture, occasionally provocative</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="info-box note">
+      <div class="info-box-icon">💡</div>
+      <div class="info-box-text"><strong>Persona Design Philosophy:</strong> The executives are designed to have genuine, grounded disagreements — CFO vs. CMO (cost vs. growth), CFO vs. CSO (short-term vs. long-term), COO as pragmatic bridge. This creates authentic boardroom dynamics, not just parallel summaries.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 4 — INTERACTION WORKFLOW
+══════════════════════════════════════════════════════ -->
+<div class="page page-break">
+
+  <div class="section">
+    <h2><span class="icon">🔄</span>4. Interaction Workflow</h2>
+    <p>The entire boardroom discussion for each CEO message is powered by exactly <strong>2 Gemini API calls</strong> — one per round. Each call returns a structured JSON array with all 4 executive responses simultaneously.</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <div class="flow-left"><div class="flow-dot">1</div><div class="flow-line"></div></div>
+        <div class="flow-content">
+          <h4>CEO Submits a Question</h4>
+          <p>User types a business question in the chat interface. The message is immediately rendered in the chat timeline (optimistic UI) and sent to the backend via <code style="font-family:monospace; font-size:8.5pt; background:#f3f4f6; padding:1px 4px; border-radius:3px;">POST /api/session/:id/message</code>.</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-left"><div class="flow-dot">2</div><div class="flow-line"></div></div>
+        <div class="flow-content">
+          <h4>Session Context Built</h4>
+          <p>The server loads the session history (up to 10 recent messages) and any uploaded P&amp;L data. This context is injected into the prompt so the board can reference real company numbers.</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-left"><div class="flow-dot">3</div><div class="flow-line"></div></div>
+        <div class="flow-content">
+          <h4>Round 1 — Initial Perspectives (1 API call)</h4>
+          <p>A single Gemini API call with all 4 persona definitions and the CEO question. The model is instructed to return a <strong>JSON array</strong> with all four executives' initial responses in one shot using structured JSON output mode (<code style="font-family:monospace; font-size:8.5pt; background:#f3f4f6; padding:1px 4px; border-radius:3px;">responseMimeType: "application/json"</code>).</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-left"><div class="flow-dot">4</div><div class="flow-line"></div></div>
+        <div class="flow-content">
+          <h4>Round 1 Responses Saved</h4>
+          <p>The 4 Round 1 messages are parsed, assigned UUIDs, timestamped, and persisted to the session JSON file on disk. Session is saved as a checkpoint — even if Round 2 fails, Round 1 is safe.</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-left"><div class="flow-dot">5</div><div class="flow-line"></div></div>
+        <div class="flow-content">
+          <h4>Round 2 — Debate (1 API call)</h4>
+          <p>A second Gemini API call passes the Round 1 responses back into the prompt. Each executive is instructed to react to their colleagues by name — agreeing where reasonable and pushing back on disagreements. Output is again a JSON array.</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-left"><div class="flow-dot">6</div><div class="flow-line"></div></div>
+        <div class="flow-content">
+          <h4>All Messages Returned to Frontend</h4>
+          <p>The API returns all new messages (CEO + 4 Round 1 + 4 Round 2 = 9 messages) in one response. The frontend re-renders the full session with round dividers automatically.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-label">Request → Response Lifecycle (simplified)</div>
+      <pre>
+POST /api/session/:id/message  { content: "Our Q3 margins dropped 4 points…" }
+    │
+    ├─ Save CEO message to session
+    │
+    ├─ [Round 1] Gemini API call → returns JSON array of 4 initial responses
+    │   ├─ CFO: "A 400 basis point drop directly impairs free cash flow…"
+    │   ├─ CMO: "A 4-point compression is a call to optimize, not retreat…"
+    │   ├─ COO: "The drag isn't ideological — it's operational friction…"
+    │   └─ CSO: "This is a strategic capital reallocation moment…"
+    │
+    ├─ Save Round 1 to session file
+    │
+    ├─ [Round 2] Gemini API call → returns JSON array of 4 debate responses
+    │   ├─ CFO: "Marcus is right on efficiency, but Priya's 'mindshare'…"
+    │   ├─ CMO: "Marcus is spot-on. Alex, demanding 12-month payback…"
+    │   ├─ COO: "Agreed with Jordan on moat protection…"
+    │   └─ CSO: "Alex, your freeze logic is sound short-term, but…"
+    │
+    ├─ Save Round 2 to session file
+    │
+    └─ Response: { messages: [ceoMsg, ...round1, ...round2] }  ✅</pre>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 5 — TECHNICAL STACK & ERROR HANDLING
+══════════════════════════════════════════════════════ -->
+<div class="page page-break">
+
+  <div class="section">
+    <h2><span class="icon">🛠️</span>5. Technical Stack</h2>
+    <div class="card-grid-3">
+      <div class="card green">
+        <h4>Backend</h4>
+        <div class="pills">
+          <div class="pill">Node.js 20</div>
+          <div class="pill">Express 4</div>
+          <div class="pill">Multer</div>
+          <div class="pill">csv-parse</div>
+          <div class="pill">uuid</div>
+          <div class="pill">dotenv</div>
+        </div>
+      </div>
+      <div class="card purple">
+        <h4>AI / API</h4>
+        <div class="pills">
+          <div class="pill">@google/genai</div>
+          <div class="pill">JSON mode</div>
+          <div class="pill">Model Cascade</div>
+        </div>
+      </div>
+      <div class="card blue">
+        <h4>Frontend</h4>
+        <div class="pills">
+          <div class="pill">Vanilla JS</div>
+          <div class="pill">HTML5</div>
+          <div class="pill">CSS3</div>
+          <div class="pill">Google Fonts</div>
+        </div>
+      </div>
+    </div>
+
+    <table>
+      <tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr>
+      <tr><td>Server</td><td>Express.js</td><td>REST API, static file serving</td></tr>
+      <tr><td>AI SDK</td><td>@google/genai</td><td>Gemini API integration with JSON mode</td></tr>
+      <tr><td>Storage</td><td>Local JSON files</td><td>Persistent session history on disk</td></tr>
+      <tr><td>File Parsing</td><td>csv-parse + JSON.parse</td><td>P&amp;L data ingestion (CSV &amp; JSON)</td></tr>
+      <tr><td>Frontend</td><td>Vanilla JS SPA</td><td>Chat UI, session switching, file upload</td></tr>
+      <tr><td>Deployment</td><td>Render.com</td><td>Free-tier Node.js hosting, auto-deploy from GitHub</td></tr>
+    </table>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="section">
+    <h2><span class="icon">🛡️</span>6. Error Handling &amp; Resilience</h2>
+
+    <h3>Model Cascade Fallback</h3>
+    <p>The server maintains a prioritised list of Gemini models. If any model exhausts its daily quota, the system automatically switches to the next without surfacing an error to the user.</p>
+
+    <div style="margin: 16px 0;">
+      <div class="cascade-row">
+        <div class="cascade-model m1">
+          <div>🥇 gemini-flash-latest</div>
+          <div class="cascade-label">Primary (gemini-3.6-flash)</div>
+        </div>
+        <div class="cascade-arrow">→</div>
+        <div class="cascade-model m2">
+          <div>🥈 gemini-3.5-flash</div>
+          <div class="cascade-label">Fallback #1</div>
+        </div>
+        <div class="cascade-arrow">→</div>
+        <div class="cascade-model m3">
+          <div>🥉 gemini-3.5-flash-lite</div>
+          <div class="cascade-label">Fallback #2</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Error Type Detection</h3>
+    <table>
+      <tr><th>Error Type</th><th>HTTP Code</th><th>Action Taken</th></tr>
+      <tr>
+        <td>Daily Quota Exhausted</td>
+        <td><span class="badge badge-red">429 PerDay</span></td>
+        <td>Immediately switch to next model in cascade (no wait)</td>
+      </tr>
+      <tr>
+        <td>Per-minute Rate Limit</td>
+        <td><span class="badge badge-amber">429 PerMin</span></td>
+        <td>Wait with exponential backoff (8s → 16s → 32s) and retry same model</td>
+      </tr>
+      <tr>
+        <td>High Demand / Overloaded</td>
+        <td><span class="badge badge-amber">503</span></td>
+        <td>Wait and retry same model (transient spike)</td>
+      </tr>
+      <tr>
+        <td>Model Deprecated</td>
+        <td><span class="badge badge-red">404</span></td>
+        <td>Caught at startup; model cascade prevents cascading failures</td>
+      </tr>
+    </table>
+
+    <h3>Frontend Resilience</h3>
+    <div class="info-box tip">
+      <div class="info-box-icon">✅</div>
+      <div class="info-box-text"><strong>Optimistic UI:</strong> CEO messages are rendered in the chat immediately on send, before the API call completes. This prevents the UI from appearing frozen during the 5-15 second AI processing window.</div>
+    </div>
+    <div class="info-box tip">
+      <div class="info-box-icon">✅</div>
+      <div class="info-box-text"><strong>Session Checkpointing:</strong> Round 1 responses are saved to disk before Round 2 starts. If Round 2 fails, the session retains Round 1 and the user can refresh to see partial results.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 6 — API, SESSIONS, DEPLOYMENT
+══════════════════════════════════════════════════════ -->
+<div class="page page-break">
+
+  <div class="section">
+    <h2><span class="icon">📡</span>7. API Reference</h2>
+    <table>
+      <tr><th>Endpoint</th><th>Method</th><th>Description</th></tr>
+      <tr><td><code>/api/sessions</code></td><td><span class="badge badge-blue">GET</span></td><td>List all sessions (sorted by date)</td></tr>
+      <tr><td><code>/api/session/new</code></td><td><span class="badge badge-green">POST</span></td><td>Create a new named session</td></tr>
+      <tr><td><code>/api/session/:id</code></td><td><span class="badge badge-blue">GET</span></td><td>Load full session with message history</td></tr>
+      <tr><td><code>/api/session/:id/message</code></td><td><span class="badge badge-green">POST</span></td><td>Send CEO question → triggers 2-round board response</td></tr>
+      <tr><td><code>/api/session/:id/upload</code></td><td><span class="badge badge-green">POST</span></td><td>Upload P&amp;L CSV or JSON for data grounding</td></tr>
+      <tr><td><code>/api/session/:id</code></td><td><span class="badge badge-red">DELETE</span></td><td>Delete a session permanently</td></tr>
+    </table>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="section">
+    <h2><span class="icon">💾</span>8. Session Data Model</h2>
+    <div class="code-block">
+      <div class="code-label">Session JSON Structure</div>
+      <pre>{
+  "id": "uuid-v4",
+  "title": "Q3 Strategy Review",
+  "createdAt": "2026-08-12T10:00:00.000Z",
+  "uploadedFileName": "pl_data.csv",
+  "uploadedData": [ { "Quarter": "Q3", "Revenue": "4.2M", ... } ],
+  "messages": [
+    { "id": "uuid", "speaker": "CEO",  "content": "...", "round": null },
+    { "id": "uuid", "speaker": "CFO",  "content": "...", "round": 1,
+      "personaName": "Alex Chen", "personaTitle": "Chief Financial Officer" },
+    { "id": "uuid", "speaker": "CMO",  "content": "...", "round": 1, ... },
+    { "id": "uuid", "speaker": "COO",  "content": "...", "round": 1, ... },
+    { "id": "uuid", "speaker": "CSO",  "content": "...", "round": 1, ... },
+    { "id": "uuid", "speaker": "CFO",  "content": "...", "round": 2, ... },
+    ...
+  ]
+}</pre>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="section">
+    <h2><span class="icon">🚀</span>9. Deployment</h2>
+    <div class="card-grid">
+      <div class="card green">
+        <h4>Platform</h4>
+        <p style="font-size:9.5pt;"><strong>Render.com</strong> — Free tier Node.js web service. Auto-deploys on every GitHub push to <code style="font-size:8.5pt;">main</code> branch.</p>
+      </div>
+      <div class="card blue">
+        <h4>Environment Variables</h4>
+        <p style="font-size:9.5pt;">Only one required: <code style="font-size:8.5pt; background:#f3f4f6; padding:2px 5px; border-radius:3px;">GEMINI_API_KEY</code> — set securely in Render's dashboard.</p>
+      </div>
+    </div>
+
+    <div class="info-box warn">
+      <div class="info-box-icon">⚠️</div>
+      <div class="info-box-text"><strong>Free Tier Note:</strong> Render spins down the server after 15 minutes of inactivity. The first request after inactivity may take 15-30 seconds to cold-start. Session files are lost on server redeploy (ephemeral disk). For persistent sessions in production, a database like PostgreSQL or MongoDB is recommended.</div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="section">
+    <h2><span class="icon">⚙️</span>10. Key Design Decisions</h2>
+    <table>
+      <tr><th>Decision</th><th>Choice Made</th><th>Rationale</th></tr>
+      <tr>
+        <td>Response Format</td>
+        <td>Structured JSON mode</td>
+        <td>Guarantees parseable output for all 4 personas in one call; prevents markdown leakage</td>
+      </tr>
+      <tr>
+        <td>API Calls per Message</td>
+        <td>2 (batch per round)</td>
+        <td>Reduced from 8 (one per persona per round) to stay well within free-tier daily limits</td>
+      </tr>
+      <tr>
+        <td>Session Storage</td>
+        <td>JSON files on disk</td>
+        <td>Zero-dependency persistence; trivial to inspect/debug; no DB setup required for prototype</td>
+      </tr>
+      <tr>
+        <td>Error Strategy</td>
+        <td>Model cascade + backoff</td>
+        <td>Distinguishes daily quotas (switch model) vs. transient spikes (wait &amp; retry same model)</td>
+      </tr>
+      <tr>
+        <td>Frontend Framework</td>
+        <td>Vanilla JS SPA</td>
+        <td>No build step; instant deploy; keeps focus on core AI interaction, not framework boilerplate</td>
+      </tr>
+      <tr>
+        <td>Auth</td>
+        <td>None</td>
+        <td>Prototype scope — auth intentionally excluded to focus on multi-agent reasoning quality</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="footer">
+    AI-Powered Virtual CXO Board &mdash; Technical Workflow Document &mdash; August 2026
+    <br>Built with Node.js · Express · Google Gemini AI · Deployed on Render
+  </div>
+
+</div>
+
+</body>
+</html>
